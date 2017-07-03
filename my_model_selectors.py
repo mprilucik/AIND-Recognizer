@@ -1,6 +1,7 @@
 import math
 import statistics
 import warnings
+import sys
 
 import numpy as np
 from hmmlearn.hmm import GaussianHMM
@@ -69,6 +70,14 @@ class SelectorBIC(ModelSelector):
 
     http://www2.imm.dtu.dk/courses/02433/doc/ch6_slides.pdf
     Bayesian information criteria: BIC = -2 * logL + p * logN
+    
+    where L is the likelihood of the 
+fitted model, p is the number of parameters,
+    and N is the number of data points. The term -2 log L decreases with
+    increasing model complexity (more parameters), whereas the penalties 2p or
+    p log N increase with increasing complexity. The BIC applies a larger penalty
+    when N > e2 = 7:4.    
+    
     """
 
     def select(self):
@@ -76,6 +85,10 @@ class SelectorBIC(ModelSelector):
         BIC score for n between self.min_n_components and self.max_n_components
 
         :return: GaussianHMM object
+        
+        
+        
+        
         """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -103,12 +116,6 @@ class SelectorCV(ModelSelector):
     ''' select best model based on average log Likelihood of cross-validation folds
 
     '''
-
-    def train_a_word(self):
-        model = GaussianHMM(n_components=self.n_constants, n_iter=1000).fit(self.X, self.lengths)
-        logL = model.score(self.X, self.lengths)
-        return model, logL
-
     def select(self):
         """
         Tip:
@@ -120,6 +127,27 @@ class SelectorCV(ModelSelector):
 
         # TODO implement model selection using CV
         word_sequences = self.words[self.this_word]
-        split_method = KFold()
-        for cv_train_idx, cv_test_idx in split_method.split(word_sequences):
-            print("Train fold indices:{} Test fold indices:{}".format(cv_train_idx, cv_test_idx))  # view indices of the folds
+        
+        max_LogL = float("-inf")
+        max_Model = None
+        
+        for n_components in range(self.min_n_components, self.max_n_components + 1):
+            split_method = KFold(n_splits=n_components)
+            try:
+                for cv_train_idx, cv_test_idx in split_method.split(word_sequences):
+#                    print("n_components: {} Train fold indices:{} Test fold indices:{}".format(n_components, len(cv_train_idx), len(cv_test_idx)))  # view indices of the folds
+                    train_X, train_lengths = combine_sequences(cv_train_idx, word_sequences)
+                    model = GaussianHMM(n_components=n_components, n_iter=1000).fit(train_X, train_lengths)
+                    test_X, test_lengths = combine_sequences(cv_test_idx, word_sequences)
+                    logL = model.score(test_X, test_lengths)
+                    if (logL > max_LogL):
+                        max_LogL = logL
+                        max_Model = model
+            except:
+                pass # passing models that cannot be trained/scored
+#                e = sys.exc_info()[0]
+#                print ('error', e, str(e))
+                
+#        print ('model', max_Model)
+#        print ('logL', max_LogL)
+        return max_Model
