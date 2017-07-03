@@ -4,8 +4,11 @@ import warnings
 
 import numpy as np
 from hmmlearn.hmm import GaussianHMM
+
 from sklearn.model_selection import KFold
 from asl_utils import combine_sequences
+
+
 
 
 class ModelSelector(object):
@@ -101,8 +104,22 @@ class SelectorCV(ModelSelector):
 
     '''
 
+    def train_a_word(self):
+        model = GaussianHMM(n_components=self.n_constants, n_iter=1000).fit(self.X, self.lengths)
+        logL = model.score(self.X, self.lengths)
+        return model, logL
+
     def select(self):
+        """
+        Tip:
+        In order to run hmmlearn training using the X,lengths tuples on the new folds, 
+        subsets must be combined based on the indices given for the folds. 
+        A helper utility has been provided in the asl_utils module named combine_sequences for this purpose.
+        """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection using CV
-        raise NotImplementedError
+        word_sequences = self.words[self.this_word]
+        split_method = KFold()
+        for cv_train_idx, cv_test_idx in split_method.split(word_sequences):
+            print("Train fold indices:{} Test fold indices:{}".format(cv_train_idx, cv_test_idx))  # view indices of the folds
