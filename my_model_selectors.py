@@ -78,6 +78,8 @@ fitted model, p is the number of parameters,
     p log N increase with increasing complexity. The BIC applies a larger penalty
     when N > e2 = 7:4.    
     
+    Model selection: The lower the BIC value the better the model    
+    
     """
 
     def select(self):
@@ -85,15 +87,31 @@ fitted model, p is the number of parameters,
         BIC score for n between self.min_n_components and self.max_n_components
 
         :return: GaussianHMM object
-        
-        
-        
-        
         """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection based on BIC scores
-        raise NotImplementedError
+        min_bic = float("inf")
+        min_Model = None
+
+        N = len(self.X)
+        logN = np.log(N)
+        
+        for n_components in range(self.min_n_components, self.max_n_components + 1):
+            try:
+                model = GaussianHMM(n_components=n_components, n_iter=1000).fit(self.X, self.lengths)
+                logL = model.score(self.X, self.lengths)
+                bic = -2*logL + n_components * logN
+                if (bic < min_bic):
+                    min_bic = bic
+                    min_Model = model
+            except:
+                pass # passing models that cannot be trained/scored
+#                e = sys.exc_info()[0]
+#                print ('error', e, str(e))
+                
+#        print ('model', min_Model)
+#        print ('bic', min_bic)
+        return min_Model
 
 
 class SelectorDIC(ModelSelector):
