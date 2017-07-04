@@ -127,7 +127,16 @@ class SelectorDIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection based on DIC scores
-        raise NotImplementedError
+        
+        # for n_components in self.min_n_components and self.max_n_components
+        # build the models, logL
+        # log(P(X(i))  = logL for GaussianHMM with n_components
+        # - 1/(M-1)SUM(log(P(X(all but i)) - sum logL fo the other models
+        # M  = self.max_n_components - self.min_n_components
+        # return the one with max DIC
+        
+        print (type(self.hwords))
+        print (self.hwords.keys())
 
 
 class SelectorCV(ModelSelector):
