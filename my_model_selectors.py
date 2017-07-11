@@ -72,7 +72,7 @@ class SelectorBIC(ModelSelector):
     Bayesian information criteria: BIC = -2 * logL + p * logN
     
     where L is the likelihood of the 
-fitted model, p is the number of parameters,
+    fitted model, p is the number of parameters,
     and N is the number of data points. The term -2 log L decreases with
     increasing model complexity (more parameters), whereas the penalties 2p or
     p log N increase with increasing complexity. The BIC applies a larger penalty
@@ -135,8 +135,30 @@ class SelectorDIC(ModelSelector):
         # M  = self.max_n_components - self.min_n_components
         # return the one with max DIC
         
-        print (type(self.hwords))
-        print (self.hwords.keys())
+        logL_model = []
+        # calculate all the models
+        for n_components in range(self.min_n_components, self.max_n_components + 1):
+            try:
+                model = GaussianHMM(n_components=n_components, n_iter=1000).fit(self.X, self.lengths)
+                logL = model.score(self.X, self.lengths)
+                logL_model.append((logL, model))
+            except:
+                pass # passing models that cannot be trained/scored
+        
+        M = len(logL_model)
+        max_dic = float("-inf")
+        max_Model = None
+        # calculate and select the max dic
+        for i in range(M):
+            logL, model = logL_model[i]
+            logL_sum = sum([logL_model[j][0] for j in range(M) if j!=i])
+            dic = logL - 1/(M-1)*logL_sum
+            if (dic > max_dic):
+                max_dic = dic
+                max_Model = model            
+#        print ('model', max_Model)
+#        print ('dic', max_dic)
+        return max_Model
 
 
 class SelectorCV(ModelSelector):
