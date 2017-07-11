@@ -95,12 +95,18 @@ class SelectorBIC(ModelSelector):
 
         N = len(self.X)
         logN = np.log(N)
+        # num of features
+        d = len(self.X[0])
         
         for n_components in range(self.min_n_components, self.max_n_components + 1):
             try:
                 model = GaussianHMM(n_components=n_components, n_iter=1000).fit(self.X, self.lengths)
                 logL = model.score(self.X, self.lengths)
-                bic = -2*logL + n_components * logN
+                # num of HMM states
+                n = n_components
+                # num of parameters
+                p = n**2 + 2*d*n - 1
+                bic = -2*logL + p * logN
                 if (bic < min_bic):
                     min_bic = bic
                     min_Model = model
@@ -146,13 +152,15 @@ class SelectorDIC(ModelSelector):
                 pass # passing models that cannot be trained/scored
         
         M = len(logL_model)
+        m = 1/(M - 1) if M > 1 else 1 # to avoid ZeroDivisionError
         max_dic = float("-inf")
+        
         max_Model = None
         # calculate and select the max dic
         for i in range(M):
             logL, model = logL_model[i]
             logL_sum = sum([logL_model[j][0] for j in range(M) if j!=i])
-            dic = logL - 1/(M-1)*logL_sum
+            dic = logL - m*logL_sum
             if (dic > max_dic):
                 max_dic = dic
                 max_Model = model            
