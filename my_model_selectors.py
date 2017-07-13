@@ -112,11 +112,6 @@ class SelectorBIC(ModelSelector):
                     min_Model = model
             except:
                 pass # passing models that cannot be trained/scored
-#                e = sys.exc_info()[0]
-#                print ('error', e, str(e))
-                
-#        print ('model', min_Model)
-#        print ('bic', min_bic)
         return min_Model
 
 
@@ -138,35 +133,42 @@ class SelectorDIC(ModelSelector):
         # build the models, logL
         # log(P(X(i))  = logL for GaussianHMM with n_components
         # - 1/(M-1)SUM(log(P(X(all but i)) - sum logL fo the other models
-        # M  = self.max_n_components - self.min_n_components
         # return the one with max DIC
         
-        logL_model = []
+        max_dic = float("-inf")
+        max_Model = None        
         # calculate all the models
         for n_components in range(self.min_n_components, self.max_n_components + 1):
             try:
                 model = GaussianHMM(n_components=n_components, n_iter=1000).fit(self.X, self.lengths)
                 logL = model.score(self.X, self.lengths)
-                logL_model.append((logL, model))
+                dic = self.get_dic(logL, model)
+                if (dic > max_dic):
+                    max_dic = dic
+                    max_Model = model                            
             except:
                 pass # passing models that cannot be trained/scored
-        
-        M = len(logL_model)
-        m = 1/(M - 1) if M > 1 else 1 # to avoid ZeroDivisionError
-        max_dic = float("-inf")
-        
-        max_Model = None
-        # calculate and select the max dic
-        for i in range(M):
-            logL, model = logL_model[i]
-            logL_sum = sum([logL_model[j][0] for j in range(M) if j!=i])
-            dic = logL - m*logL_sum
-            if (dic > max_dic):
-                max_dic = dic
-                max_Model = model            
-#        print ('model', max_Model)
-#        print ('dic', max_dic)
         return max_Model
+
+    def get_dic(self, wordlogL, model):
+        """
+        log(P(X(i))  = logL for GaussianHMM with n_components 
+        1/(M-1)SUM(log(P(X(all but i)) - sum logL fo the other models
+        returns log(P(X(i)) - 1/(M-1)SUM(log(P(X(all but i))
+        """
+
+        logLs = []
+        for word in [w for w in self.words.keys() if w!=self.this_word]:
+            X, lengths = self.hwords[word]
+            try:
+                logL = model.score(X, lengths)
+                logLs.append(logL)
+            except:
+                pass
+        M = len(logLs)
+        m = 1/(M - 1) if M > 1 else 1 # to avoid ZeroDivisionError        
+        return  wordlogL - m*sum(logLs)
+
 
 
 class SelectorCV(ModelSelector):
@@ -192,7 +194,6 @@ class SelectorCV(ModelSelector):
             split_method = KFold(n_splits=n_components)
             try:
                 for cv_train_idx, cv_test_idx in split_method.split(word_sequences):
-#                    print("n_components: {} Train fold indices:{} Test fold indices:{}".format(n_components, len(cv_train_idx), len(cv_test_idx)))  # view indices of the folds
                     train_X, train_lengths = combine_sequences(cv_train_idx, word_sequences)
                     model = GaussianHMM(n_components=n_components, n_iter=1000).fit(train_X, train_lengths)
                     test_X, test_lengths = combine_sequences(cv_test_idx, word_sequences)
@@ -202,9 +203,5 @@ class SelectorCV(ModelSelector):
                         max_Model = model
             except:
                 pass # passing models that cannot be trained/scored
-#                e = sys.exc_info()[0]
-#                print ('error', e, str(e))
                 
-#        print ('model', max_Model)
-#        print ('logL', max_LogL)
         return max_Model

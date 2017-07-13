@@ -32,12 +32,12 @@ def recognize(models: dict, test_set: SinglesData):
                 logL = model.score(X, lengths)
             except:
                 pass
+            # add logL for the word to the dict
             logLvalues[word] = logL
             if logL > maxL:
+                # guess is the workd with max logL
                 guess = word
                 maxL = logL
         guesses.append(guess)
         probabilities.append(logLvalues)
-#        print (i, 'logLvalues', logLvalues)
-#    print ('guesses', guesses)
     return probabilities, guesses
